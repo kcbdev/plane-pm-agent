@@ -19,12 +19,23 @@
 
 ## Environment Variables
 
+### Plane connection
+
 | Variable | Required | Description |
 |---|---|---|
 | `PLANE_BASE_URL` | Yes | Base URL of your Plane instance (no trailing slash) |
 | `PLANE_PAT` | Yes | Personal Access Token from Plane Settings → Tokens |
 | `PLANE_WORKSPACE_SLUG` | Yes | Workspace slug (the part after `/` in the workspace URL) |
 | `PLANE_PROJECT_ID` | Yes | Default project UUID (used when `project_id` is not passed) |
+
+### Security (required)
+
+| Variable | Default | Description |
+|---|---|---|
+| `PM_AGENT_API_KEY` | — | **Required.** API key clients must pass as `X-API-Key` or `Authorization: Bearer`. Generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+| `PM_AGENT_AUTH_ENABLED` | `true` | Set `false` to disable API key auth (not recommended for internet-facing deployments) |
+| `PM_AGENT_RATE_LIMIT` | `60/minute` | Sliding window rate limit per client IP. Format: `count/period` where period is `s`, `m`, or `h`. |
+| `PM_AGENT_HSTS_MAX_AGE` | `31536000` | HSTS max-age in seconds (default 1 year). Set `0` to disable HSTS. |
 
 ## API Conventions
 
@@ -238,11 +249,48 @@ Build pack: `Dockerfile`
 Port: `8212`
 Health check: disabled (SSE-only, no `/` response)
 
+**Required env vars in Coolify:**
+- `PLANE_BASE_URL`, `PLANE_PAT`, `PLANE_WORKSPACE_SLUG`, `PLANE_PROJECT_ID`
+- `PM_AGENT_API_KEY` — **set this, do not skip**
+
 Traefik labels (set in Coolify FQDN config):
 ```
 traefik.http.routers.plane-pm.rule=Host(`plane-pm.your-domain.com`) && PathPrefix(`/`)
 traefik.http.services.plane-pm.loadbalancer.server.port=8212
 ```
+
+## Security
+
+The server applies three hardening layers:
+
+### 1. API key authentication
+All MCP endpoints require a valid `X-API-Key` (or `Authorization: Bearer`) header.
+If `PM_AGENT_API_KEY` is unset, the server **rejects all requests** to avoid accidental open access.
+
+MCP clients must pass the key. Example for Qwen Code:
+```json
+{
+  "mcpServers": {
+    "plane-pm": {
+      "url": "https://plane-pm.kcb.ma/mcp",
+      "headers": { "X-API-Key": "your-key-here" }
+    }
+  }
+}
+```
+
+### 2. Rate limiting
+Sliding window rate limiter: configurable per IP (default **60 req/minute**). Returns `429` with `Retry-After` and standard rate-limit headers (`X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`).
+
+### 3. Security headers
+All responses include:
+- `Strict-Transport-Security: max-age=31536000; includeSubDomains; preload`
+- `X-Frame-Options: DENY`
+- `X-Content-Type-Options: nosniff`
+- `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'; ...`
+- `Cache-Control: no-store, no-cache, ...`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+- `Permissions-Policy: accelerometer=(), camera=(), microphone=()`
 
 ## Known Limitations
 

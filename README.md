@@ -70,12 +70,15 @@ docker-compose up -d
 
 ## Configuration
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `PLANE_BASE_URL` | Yes | `https://plane.kcb.ma` | Your Plane instance base URL |
-| `PLANE_PAT` | Yes | — | Personal Access Token from Plane |
-| `PLANE_WORKSPACE_SLUG` | Yes | `kcbdev` | Workspace identifier (slug) |
-| `PLANE_PROJECT_ID` | No | env default | Default project for tools that need one |
+| Variable | Required | Description |
+|---|---|---|
+| `PLANE_BASE_URL` | Yes | Your Plane instance base URL (no trailing slash) |
+| `PLANE_PAT` | Yes | Personal Access Token from Plane |
+| `PLANE_WORKSPACE_SLUG` | Yes | Workspace slug |
+| `PLANE_PROJECT_ID` | Yes | Default project UUID |
+| `PM_AGENT_API_KEY` | **Yes** | API key for MCP client auth. Generate with `python -c "import secrets; print(secrets.token_urlsafe(32))"` |
+
+> **Security:** If `PM_AGENT_API_KEY` is unset the server rejects **all** requests to prevent accidental open access.
 
 ### Getting a Personal Access Token
 
@@ -85,16 +88,17 @@ docker-compose up -d
 
 ## MCP Clients
 
-### Qwen Code
+All clients require the `X-API-Key` header set to the value of `PM_AGENT_API_KEY`.
 
-Add to your `settings.json`:
+### Qwen Code
 
 ```json
 {
   "mcpServers": {
     "plane-pm": {
       "url": "https://plane-pm.kcb.ma/mcp",
-      "enabled": true
+      "headers": { "X-API-Key": "your-pm-agent-api-key" },
+      "timeout": 300000
     }
   }
 }
@@ -102,14 +106,13 @@ Add to your `settings.json`:
 
 ### Zed
 
-Add to `~/.config/zed/settings.json`:
-
 ```json
 {
   "mcp": {
     "servers": {
       "plane-pm": {
-        "url": "https://plane-pm.kcb.ma/mcp"
+        "url": "https://plane-pm.kcb.ma/mcp",
+        "headers": { "X-API-Key": "your-pm-agent-api-key" }
       }
     }
   }
