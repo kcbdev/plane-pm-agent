@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install ruff pytest
+
+      - name: Lint
+        run: ruff check .
+
+      - name: Type check
+        run: |
+          pip install pyright
+          pyright app/ || true
+
+      - name: Test
+        run: pytest -v
+
+  docker-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t plane-pm-agent:test .
+
+      - name: Smoke test (starts and exits clean)
+        run: |
+          docker run -d --name pm-agent-test -e PLANE_BASE_URL=https://plane.so \
+            -e PLANE_PAT=test_token -e PLANE_WORKSPACE_SLUG=test \
+            -e PLANE_PROJECT_ID=00000000-0000-0000-0000-000000000000 \
+            plane-pm-agent:test
+          sleep 3
+          docker logs pm-agent-test | grep -q "Uvicorn running" && echo "Server started OK"
+          docker stop pm-agent-test

@@ -9,10 +9,10 @@ from fastmcp import FastMCP
 # ---------------------------------------------------------------------------
 # Config from env
 # ---------------------------------------------------------------------------
-PLANE_BASE_URL = os.getenv("PLANE_BASE_URL", "https://plane.kcb.ma")
-PLANE_API_KEY = os.getenv("PLANE_PAT", "plane_api_ac571e3e4b80488fac8d6d45d679da75")
-PLANE_WORKSPACE = os.getenv("PLANE_WORKSPACE_SLUG", "kcbdev")
-PLANE_PROJECT_ID = os.getenv("PLANE_PROJECT_ID", "3b5bd197-028c-4884-a304-011f088694e2")
+PLANE_BASE_URL = os.getenv("PLANE_BASE_URL", "")
+PLANE_API_KEY = os.getenv("PLANE_PAT", "")
+PLANE_WORKSPACE = os.getenv("PLANE_WORKSPACE_SLUG", "")
+PLANE_PROJECT_ID = os.getenv("PLANE_PROJECT_ID", "")
 
 API_BASE = f"{PLANE_BASE_URL}/api/v1"
 HEADERS = {
